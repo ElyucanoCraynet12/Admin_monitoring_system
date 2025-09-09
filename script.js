@@ -1260,6 +1260,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const card = document.querySelector('#datalogs-page .card');
         exportElementToPDF(card || document.body, 'data-logs.pdf');
     });
+    document.getElementById('datalogs-export-pdf')?.addEventListener('click', () => {
+        const card = document.querySelector('#datalogs-page .card');
+        exportElementToPDF(card || document.body, 'data-logs.pdf');
+    });
 
     // Inject search inputs for Alerts and Data Logs
     (function injectSearchControls(){
