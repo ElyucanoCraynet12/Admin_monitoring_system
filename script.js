@@ -19,7 +19,7 @@ const translations = {
         "warning": "Warning",
         "parameter_trends": "Parameter Trends",
         "recent_alerts": "Recent Alerts",
-        "system_controller": "System Controller",
+    "system_guide": "System Guide",
         "controllers": "Controllers",
         "water_quality_tips": "Water Quality Tips",
         "quick_access": "Quick Access",
@@ -99,7 +99,7 @@ const translations = {
         "warning": "Babala",
         "parameter_trends": "Mga Trend ng Parameter",
         "recent_alerts": "Mga Kamakailang Alerto",
-        "system_controller": "Kontrol ng Sistema",
+    "system_guide": "Gabay ng Sistema",
         "controllers": "Mga Kontrol",
         "water_quality_tips": "Mga Tip sa Kalidad ng Tubig",
         "quick_access": "Mabilisang Pag-access",
@@ -167,7 +167,7 @@ const translations = {
         "dashboard": "Dashboard",
         "alerts": "Dagiti Alerto",
         "data_logs": "Dagiti Log ti Datos",
-        "farm_location": "Lokasion ti Talun",
+        "farm_location": "Lokasion",
         "settings": "Dagiti Setting",
         "logout": "Rummuar",
         "dashboard_overview": "Sangkabuuan ti Dashboard",
@@ -179,16 +179,16 @@ const translations = {
         "warning": "Pakdaar",
         "parameter_trends": "Dagiti Trend ti Parameter",
         "recent_alerts": "Dagiti Baro nga Alerto",
-        "system_controller": "Kontroler ti Sistema",
+    "system_guide": "Gabay ti Sistema",
         "controllers": "Dagiti Kontroler",
         "water_quality_tips": "Dagiti Balakad ti Kalidad ti Danum",
-        "quick_access": "Napardas a Panagserrek",
+        "quick_access": "Nadaras a Pag-access",
         "export_pdf": "I-export kas PDF",
         "export_csv": "I-export kas CSV",
         "about_developers": "Maipapan Kadagiti Developer",
         "lead_developer": "Pangulo a Developer",
         "language": "Pagsasao",
-        "quick_links": "Napardas a Link",
+        "quick_links": "Dagiti Link",
         "sensors": "Dagiti Sensor",
         "about": "Maipapan",
         "contact": "Kontaken",
@@ -309,12 +309,13 @@ function setLanguage(lang) {
     // Data logs table headers
     if (document.getElementById('data-log-table')) {
         const ths = document.querySelectorAll('#data-log-table thead th');
-        if (ths.length === 5) {
-            ths[0].textContent = translations[lang]?.timestamp || ths[0].textContent;
-            ths[1].textContent = translations[lang]?.temperature_c || ths[1].textContent;
-            ths[2].textContent = translations[lang]?.ph_level_header || ths[2].textContent;
-            ths[3].textContent = translations[lang]?.dissolved_oxygen_mg || ths[3].textContent;
-            ths[4].textContent = translations[lang]?.sensor_id || ths[4].textContent;
+        // Expected columns: checkbox, timestamp, temperature, pH, dissolved oxygen, turbidity
+        if (ths.length >= 6) {
+            ths[1].textContent = translations[lang]?.timestamp || ths[1].textContent;
+            ths[2].textContent = translations[lang]?.temperature_c || ths[2].textContent;
+            ths[3].textContent = translations[lang]?.ph_level_header || ths[3].textContent;
+            ths[4].textContent = translations[lang]?.dissolved_oxygen_mg || ths[4].textContent;
+            ths[5].textContent = translations[lang]?.temperature_c ? translations[lang]?.turbidity || ths[5].textContent : ths[5].textContent;
         }
     }
     // Alerts sample phrases
@@ -974,7 +975,6 @@ class FirebaseDataManager {
                 <td>${fmtNum(reading.ph)}</td>
                 <td>${fmtNum(reading.dissolvedOxygen)}</td>
                 <td>${fmtNum(reading.turbidity)}</td>
-                <td>${reading.sensorId ? String(reading.sensorId) : ''}</td>
             `;
             // Insert at top (newest first)
             dataLogsTable.insertBefore(row, dataLogsTable.firstChild);
@@ -1252,120 +1252,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const page = document.querySelector('#alerts-page .card');
         exportElementToPDF(page, 'all-alerts.pdf');
     });
-    document.getElementById('export-csv')?.addEventListener('click', () => {
-        const table = document.querySelector('#data-log-table');
-        exportTableToCSV(table, 'data-logs.csv');
-    });
-    document.getElementById('export-pdf')?.addEventListener('click', () => {
-        const card = document.querySelector('#datalogs-page .card');
-        exportElementToPDF(card || document.body, 'data-logs.pdf');
-    });
-    document.getElementById('datalogs-export-pdf')?.addEventListener('click', () => {
-        const card = document.querySelector('#datalogs-page .card');
-        exportElementToPDF(card || document.body, 'data-logs.pdf');
-    });
+    // Data Logs export buttons removed — export handlers intentionally disabled.
 
     // Inject search inputs for Alerts and Data Logs
     (function injectSearchControls(){
-        const alertsCardHeader = document.querySelector('#alerts-page .card-header');
-        if (alertsCardHeader && !alertsCardHeader.querySelector('.alerts-search')) {
-            const input = document.createElement('input');
-            input.className = 'alerts-search';
-            input.placeholder = 'Search alerts (MM/DD/YYYY or YYYY-MM-DD)';
-            input.style.marginLeft = 'auto';
-            // Bulk delete button
-            const delBtn = document.createElement('button');
-            delBtn.textContent = 'Bulk Delete';
-            delBtn.className = 'btn btn-secondary';
-            delBtn.style.marginLeft = '0.5rem';
-            alertsCardHeader.appendChild(input);
-            alertsCardHeader.appendChild(delBtn);
-            input.addEventListener('input', () => {
-                const q = input.value.trim();
-                const norm = (s)=> s.replace(/\//g,'-');
-                document.querySelectorAll('#alerts-page ul.alert-list.full li.alert').forEach(li => {
-                    const ts = (li.querySelector('.alert-details small')?.textContent || '').trim();
-                    const hay = norm(ts).toLowerCase();
-                    const needle = norm(q).toLowerCase();
-                    li.style.display = hay.includes(needle) ? '' : 'none';
-                });
-            });
-            // Enable multi-select and delete from DB if keys exist under waterCondition/alerts
-            const allUl = document.querySelector('#alerts-page ul.alert-list.full');
-            if (allUl) {
-                allUl.addEventListener('click', (e) => {
-                    const li = e.target.closest('li.alert');
-                    if (!li) return;
-                    li.classList.toggle('selected');
-                });
-                delBtn.addEventListener('click', async () => {
-                    const selected = Array.from(allUl.querySelectorAll('li.alert.selected'));
-                    if (selected.length === 0) return;
-                    // Attempt to delete by key stored in data-key
-                    const ops = selected.map(li => {
-                        const key = li.getAttribute('data-key');
-                        if (!key) { li.remove(); return null; }
-                        const r = window.firebaseRef(window.firebaseDatabase, `waterCondition/alerts/${key}`);
-                        return window.firebaseRemove(r).then(()=> li.remove()).catch(()=>{});
-                    }).filter(Boolean);
-                    await Promise.all(ops);
-                });
-            }
-        }
-        const logsHeader = document.querySelector('#datalogs-page .card-header');
-        if (logsHeader && !logsHeader.querySelector('.logs-search')) {
-            const input = document.createElement('input');
-            input.className = 'logs-search';
-            input.placeholder = 'Search logs (MM/DD/YYYY or YYYY-MM-DD)';
-            input.style.marginLeft = '1rem';
-            const delBtn = document.createElement('button');
-            delBtn.textContent = 'Bulk Delete';
-            delBtn.className = 'btn btn-secondary';
-            delBtn.style.marginLeft = '0.5rem';
-            logsHeader.appendChild(input);
-            logsHeader.appendChild(delBtn);
-            input.addEventListener('input', () => {
-                const q = input.value.trim();
-                const norm = (s)=> s.replace(/\//g,'-');
-                document.querySelectorAll('#data-log-table tbody tr').forEach(tr => {
-                    const ts = (tr.querySelector('td:nth-child(2)')?.textContent || '').trim();
-                    const match = norm(ts).toLowerCase().includes(norm(q).toLowerCase());
-                    tr.style.display = match ? '' : 'none';
-                });
-            });
-            // Row select + bulk delete by timestamp key if present
-            const tbody = document.querySelector('#data-log-table tbody');
-            if (tbody) {
-                tbody.addEventListener('click', (e) => {
-                    const tr = e.target.closest('tr');
-                    if (!tr) return;
-                    if (e.target.classList.contains('log-row-select')) {
-                        tr.classList.toggle('selected', e.target.checked);
-                    } else {
-                        const cb = tr.querySelector('.log-row-select');
-                        if (cb) { cb.checked = !cb.checked; tr.classList.toggle('selected', cb.checked); }
-                    }
-                });
-                // Select all
-                document.getElementById('logs-select-all')?.addEventListener('change', (e)=>{
-                    const checked = e.target.checked;
-                    tbody.querySelectorAll('tr').forEach(tr=>{
-                        const cb = tr.querySelector('.log-row-select'); if (cb) { cb.checked = checked; tr.classList.toggle('selected', checked); }
-                    });
-                });
-                delBtn.addEventListener('click', async () => {
-                    const selected = Array.from(tbody.querySelectorAll('tr.selected'));
-                    if (!selected.length) return;
-                    const ops = selected.map(tr => {
-                        const key = tr.getAttribute('data-key');
-                        if (!key) { tr.remove(); return null; }
-                        const r = window.firebaseRef(window.firebaseDatabase, `sensorReadings/${key}`);
-                        return window.firebaseRemove(r).then(()=> tr.remove()).catch(()=>{});
-                    }).filter(Boolean);
-                    await Promise.all(ops);
-                });
-            }
-        }
+        // Alerts search, row-select and bulk-delete controls removed per request.
+        // Data Logs search and bulk-delete controls removed per request.
     })();
     // --- LOGOUT & FINAL INIT ---
     document.getElementById('logout-button')?.addEventListener('click', e => {
