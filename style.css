@@ -535,7 +535,8 @@ input:checked + .slider:before {
 /* Footer */
 .site-footer {
   
-    background-image: url('/img/footerBg.jpg'); /* Add your image path here */
+    /* Use project-relative path so the image loads when served from project root */
+    background-image: url('img/footerBg.jpg');
     background-size: cover; /* Cover the entire footer area */
     background-position: center center; /* Center the image */
     background-repeat: no-repeat; /* Prevent image repetition */
